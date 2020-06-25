@@ -8,3 +8,4 @@ def nll_loss(output, target):
 
 def CE(output, target):
     return F.cross_entropy(output, target)
+

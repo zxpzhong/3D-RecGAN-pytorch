@@ -22,13 +22,19 @@ class Trainer(BaseTrainer):
             self.data_loader = inf_loop(data_loader)
             self.len_epoch = len_epoch
         self.valid_data_loader = valid_data_loader
-        self.do_validation = self.valid_data_loader is not None
         self.lr_scheduler = lr_scheduler
         self.log_step = int(np.sqrt(data_loader.batch_size))
 
         self.train_metrics = MetricTracker('loss', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
         self.valid_metrics = MetricTracker('loss', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
-
+        
+        # AE reconstruction loss
+        # self.AE_loss = F.cross_entropy
+        
+        # optimizer
+        self.Generator_opt = torch.optim.Adam(self.model.unet, lr = 0.01, momentum=0.9)
+        self.Discriminator_opt = torch.optim.Adam(self.model.discriminator, lr = 0.01, momentum=0.9)
+        
     def _train_epoch(self, epoch):
         """
         Training logic for an epoch
@@ -39,34 +45,38 @@ class Trainer(BaseTrainer):
         self.model.train()
         self.train_metrics.reset()
         batch = self.data_loader.next()
-        # for batch_idx, (data, target) in enumerate(self.data_loader):
-        batch_idx = 0
-        while batch is not None:
-            data, target = batch
-            data, target = data.to(self.device), target.to(self.device)
-
+        for batch_idx, (X, Y) in enumerate(self.data_loader):
+            X, Y = X.to(self.device), Y.to(self.device)
             self.optimizer.zero_grad()
-            output = self.model(data)
-            loss = self.criterion(output, target)
+            Y_fake,dis_fake = self.model(X)
+            # train AE(G)
+            # cross-entropy
+            loss_AE = F.cross_entropy(Y_fake,Y)
+            # discriminator score
+            loss_G = -torch.mean(dis_fake)
+            loss = loss_AE+loss_G
             loss.backward()
-            self.optimizer.step()
-
-            self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
-            self.train_metrics.update('loss', loss.item())
-            for met in self.metric_ftns:
-                self.train_metrics.update(met.__name__, met(output, target))
+            self.Generator_opt.step()
+            
+            # train D
+            dis_real = self.model.discriminator(X)
+            loss = torch.mean(Y_fake)-torch.mean(dis_real)
+            loss.backward()
+            self.Discriminator_opt.step()
+            
 
             if batch_idx % self.log_step == 0:
+                self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
+                self.train_metrics.update('loss', loss.item())
                 self.logger.debug('Train Epoch: {} {} Loss: {:.6f}'.format(
                     epoch,
                     self._progress(batch_idx),
                     loss.item()))
-                self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
+                # self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
             if batch_idx == self.len_epoch:
                 break
             batch_idx+=1
             batch = self.data_loader.next()
-            
             
         log = self.train_metrics.result()
 
@@ -88,43 +98,30 @@ class Trainer(BaseTrainer):
         self.model.eval()
         self.valid_metrics.reset()
         with torch.no_grad():
-            if self.veri_mode == False:
-                for batch_idx, (data, target) in enumerate(self.valid_data_loader):
-                    data, target = data.to(self.device), target.to(self.device)
+            distances = []
+            distance_data_list = []
+            labels = []
+            for batch_idx, (data1,data2, target) in enumerate(self.valid_data_loader):
+                data1,data2, target = data1.to(self.device),data2.to(self.device), target.to(self.device)
 
-                    output = self.model(data)
-                    loss = self.criterion(output, target)
-
-                    self.writer.set_step((epoch - 1) * len(self.valid_data_loader) + batch_idx, 'valid')
-                    self.valid_metrics.update('loss', loss.item())
-                    for met in self.metric_ftns:
-                        self.valid_metrics.update(met.__name__, met(output, target))
-                    self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
-            else:
-                distances = []
-                distance_data_list = []
-                labels = []
-                for batch_idx, (data1,data2, target) in enumerate(self.valid_data_loader):
-                    data1,data2, target = data1.to(self.device),data2.to(self.device), target.to(self.device)
-
-                    output1 = self.model.extract_feature(data1)
-                    output2 = self.model.extract_feature(data2)
-                    dis = F.cosine_similarity(output1, output2).cpu()
-                    distances.append(dis)
-                    distance_data_list.append(np.array(dis))
-                    labels.append(target)
-                    
-                # cat all distances
-                distances = torch.cat(distances)
-                # cat all labels
-                label = torch.cat(labels)
-                # cal eer
-                intra_cnt_final,inter_cnt_final,intra_len_final,inter_len_final,eer, bestThresh, minV = calc_eer(distances, label)
-                self.logger.debug('eer : {}, bestThresh : {},'.format(eer,bestThresh))
-                self.logger.debug("intra_cnt is : {} , inter_cnt is {} , intra_len is {} , inter_len is {}".format(intra_cnt_final,inter_cnt_final,intra_len_final,inter_len_final))
-                self.writer.set_step((epoch - 1), 'valid')
-                self.valid_metrics.update('loss', eer)
-                self.writer.add_image('input', make_grid(data1.cpu(), nrow=8, normalize=True))
+                output1 = self.model.extract_feature(data1)
+                output2 = self.model.extract_feature(data2)
+                dis = F.cosine_similarity(output1, output2).cpu()
+                distances.append(dis)
+                distance_data_list.append(np.array(dis))
+                labels.append(target)
+                
+            # cat all distances
+            distances = torch.cat(distances)
+            # cat all labels
+            label = torch.cat(labels)
+            # cal eer
+            intra_cnt_final,inter_cnt_final,intra_len_final,inter_len_final,eer, bestThresh, minV = calc_eer(distances, label)
+            self.logger.debug('eer : {}, bestThresh : {},'.format(eer,bestThresh))
+            self.logger.debug("intra_cnt is : {} , inter_cnt is {} , intra_len is {} , inter_len is {}".format(intra_cnt_final,inter_cnt_final,intra_len_final,inter_len_final))
+            self.writer.set_step((epoch - 1), 'valid')
+            self.valid_metrics.update('loss', eer)
+            self.writer.add_image('input', make_grid(data1.cpu(), nrow=8, normalize=True))
         # add histogram of model parameters to the tensorboard
         for name, p in self.model.named_parameters():
             self.writer.add_histogram(name, p, bins='auto')
