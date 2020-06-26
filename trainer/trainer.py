@@ -1,8 +1,10 @@
+import os
 import numpy as np
 import torch
 from torchvision.utils import make_grid
 from base import BaseTrainer
 from utils import inf_loop, MetricTracker,calc_eer
+from utils.numpy3D import numpy_2_ply
 import torch.nn.functional as F
 from tqdm import tqdm
 class Trainer(BaseTrainer):
@@ -113,17 +115,32 @@ class Trainer(BaseTrainer):
         self.model.eval()
         self.valid_metrics.reset()
         with torch.no_grad():
+            X_list = []
             Y_fake_list = []
+            Y_list = []
+            length = 20
             for batch_idx, (X,Y) in enumerate(tqdm(self.valid_data_loader)):
                 X,Y = X.to(self.device).float(),Y.to(self.device).float()
                 Y_fake = self.model.module.unet(X)
                 for i in range(Y_fake.shape[0]):
                     Y_fake_list.append(Y_fake[i].cpu().numpy())
+                    X_list.append(X[i].cpu().numpy())
+                    Y_list.append(Y[i].cpu().numpy())
+                if batch_idx > length:
+                    break
             
             # cal test loss
             
             # save test set reconstruction 3D voxel
-            np.save("test_{}.npy".format(epoch),np.array(Y_fake_list))
+            # np.save("test_{}.npy".format(epoch),np.array(Y_fake_list))
+            Y_fake_array = np.array(Y_fake_list).transpose([0,2,3,4,1])
+            X_array = np.array(X_list).transpose([0,2,3,4,1])
+            Y_array = np.array(Y_list).transpose([0,2,3,4,1])
+            print('saving ply......')
+            for i in tqdm(range(Y_fake_array.shape[0])):
+                numpy_2_ply(Y_fake_array[i],os.path.join(self.config.save_dir,'Y_fake_epoch_{}_{}.ply'.format(epoch,i)),threshold=0.5)
+                numpy_2_ply(X_array[i],os.path.join(self.config.save_dir,'X_epoch_{}_{}.ply'.format(epoch,i)),threshold=0.5)
+                numpy_2_ply(Y_array[i],os.path.join(self.config.save_dir,'Y_epoch_{}_{}.ply'.format(epoch,i)),threshold=0.5)
             # log 
             
             # self.logger.debug("intra_cnt is : {} , inter_cnt is {} , intra_len is {} , inter_len is {}".format(intra_cnt_final,inter_cnt_final,intra_len_final,inter_len_final))

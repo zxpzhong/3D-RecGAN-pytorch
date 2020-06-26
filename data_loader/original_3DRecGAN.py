@@ -85,7 +85,6 @@ class Data:
     def load_X_Y_files_paths(self,X_folder, Y_folder):
         X_data_files = [X_f for X_f in sorted(os.listdir(X_folder))]
         Y_data_files = [Y_f for Y_f in sorted(os.listdir(Y_folder))]
-
         return X_data_files, Y_data_files
 
     def voxel_grid_padding(self,a):
