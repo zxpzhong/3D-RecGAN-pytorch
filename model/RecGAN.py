@@ -193,7 +193,7 @@ class UNet3D(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, in_channels,conv_depths=(64, 128, 256, 512)):
+    def __init__(self, in_channels,conv_depths=(4,8, 16, 32,64,128,1)):
         assert len(conv_depths) > 2, 'conv_depths must have at least 3 members'
 
         super(Discriminator, self).__init__()
@@ -202,23 +202,16 @@ class Discriminator(nn.Module):
         encoder_layers = []
         encoder_layers.append(First3D(in_channels, conv_depths[0], conv_depths[0]))
         encoder_layers.extend([Encoder3D(conv_depths[i], conv_depths[i + 1], conv_depths[i + 1])
-                               for i in range(len(conv_depths)-2)])
+                               for i in range(len(conv_depths)-1)])
 
         # encoder, center and decoder layers
         self.encoder_layers = nn.Sequential(*encoder_layers)
-        self.center = Center3D(conv_depths[-2], conv_depths[-1], conv_depths[-1], conv_depths[-2])
-        
-        # GAP
-        # fc to regression
-        
 
     def forward(self, x, return_all=False):
         x_enc = [x]
         for enc_layer in self.encoder_layers:
             x_enc.append(enc_layer(x_enc[-1]))
-        x_dec = [self.center(x_enc[-1])]
-        return x_dec[-1]
-
+        return F.sigmoid(x_enc[-1])
 
 
 class RecGAN(nn.Module):

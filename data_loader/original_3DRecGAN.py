@@ -140,6 +140,7 @@ class Data:
 
         #Data.plotFromVoxels(voxel_grid)
         voxel_grid = self.voxel_grid_padding(voxel_grid)
+        voxel_grid = voxel_grid.transpose([3,0,1,2])
         return voxel_grid
 
     def load_X_Y_voxel_grids(self,X_data_files, Y_data_files):
@@ -166,6 +167,7 @@ class Data:
 class train_original_3DRecGAN(BaseDataLoader):
     def __init__(self, data_dir, batch_size, shuffle=True, num_workers=1, training=True):
         self.dataset = Train_Dataset(data_dir)
+        self.batch_size = batch_size
         super().__init__(self.dataset, batch_size, shuffle, num_workers)
         
 class test_original_3DRecGAN(BaseDataLoader):

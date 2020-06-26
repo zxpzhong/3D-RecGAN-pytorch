@@ -96,8 +96,8 @@ class BaseTrainer:
                                      "Training stops.".format(self.early_stop))
                     break
 
-            if epoch % self.save_period == 0:
-                self._save_checkpoint(epoch, save_best=best)
+            # if epoch % self.save_period == 0:
+            #     self._save_checkpoint(epoch, save_best=best)
 
     def _prepare_device(self, n_gpu_use):
         n_gpu_use = n_gpu_use.split(',')
@@ -111,7 +111,10 @@ class BaseTrainer:
         if len(n_gpu_use) >0 :
             for gpu in n_gpu_use:
                 gpu_str+=gpu+','
+            print(gpu_str[:-1])
             os.environ["CUDA_VISIBLE_DEVICES"] = gpu_str[:-1]
+            # print("#########GPU : ",self.config.local_rank)
+            # torch.cuda.set_device(self.config.local_rank)
         n_gpu = torch.cuda.device_count()
         if len(n_gpu_use) > 0 and n_gpu == 0:
             self.logger.warning("Warning: There\'s no GPU available on this machine,"
@@ -149,27 +152,6 @@ class BaseTrainer:
             best_path = str(self.checkpoint_dir / 'model_best.pth')
             torch.save(state, best_path)
             self.logger.info("Saving current best: model_best.pth ...")
-        
-        # saved as onnx
-        self.model.eval()
-        x = torch.randn(1,*(3,224,224)).cuda()
-        # file name
-        export_onnx_file = str(self.checkpoint_dir / 'checkpoint-epoch{}.onnx'.format(epoch))
-        # self.model.set_swish(memory_efficient=False)
-        # 导出
-        torch.onnx.export(self.model,
-                            x,
-                            export_onnx_file,
-                            export_params=True,
-                            verbose=True,
-                            # opset_version=10,
-                            # do_constant_folding=True,	# 是否执行常量折叠优化
-                            input_names=["input"],		# 输入名
-                            output_names=["output"],	# 输出名
-                            # dynamic_axes={"input":{0:"batch_size"},		# 批处理变量
-                                            # "output":{0:"batch_size"}}
-                            )
-        # self.model.set_swish(memory_efficient=True)
         self.model.train()
 
     def _resume_checkpoint(self, resume_path):

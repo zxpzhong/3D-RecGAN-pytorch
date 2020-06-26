@@ -1,7 +1,6 @@
 {
     "name": "3DRecGAN",
-    "n_gpu": "1",
-
+    "n_gpu": "1,2",
     "arch": {
         "type": "RecGAN",
         "args": {}
@@ -10,7 +9,7 @@
         "type": "train_original_3DRecGAN",
         "args":{
             "data_dir": "/home/data/3d/3D-RecGAN_Data/",
-            "batch_size": 16,
+            "batch_size": 8,
             "shuffle": true,
             "num_workers": 2
         }
@@ -19,7 +18,7 @@
         "type": "test_original_3DRecGAN",
         "args":{
             "data_dir": "/home/data/3d/3D-RecGAN_Data/",
-            "batch_size": 16,
+            "batch_size": 4,
             "shuffle": false,
             "num_workers": 2
         }
