@@ -22,8 +22,8 @@ def main(config):
 
     # setup data_loader instances
     data_loader = config.init_obj('data_loader', module_data)
-    veri_flag , valid_data_loader = data_loader.split_validation()
-
+    valid_data_loader = config.init_obj('test_data_loader', module_data)
+    
     # build model architecture, then print to console
     model = config.init_obj('arch', module_arch)
     logger.info(model)
@@ -42,7 +42,6 @@ def main(config):
                       config=config,
                       data_loader=data_loader,
                       valid_data_loader=valid_data_loader,
-                      veri_mode = veri_flag,
                       lr_scheduler=lr_scheduler)
     trainer.train()
 

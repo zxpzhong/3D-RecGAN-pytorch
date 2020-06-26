@@ -163,19 +163,15 @@ class Data:
         return X_voxel_grids, Y_voxel_grids
 
 
-class original_3DRecGAN(BaseDataLoader):
-    def __init__(self, data_dir,test_dir, batch_size, shuffle=True, num_workers=1, training=True):
-        self.data_dir = data_dir
-        if test_dir == '':
-            self.test_dir = None
-        else:
-            self.test_dir = test_dir
-        self.dataset = Train_Dataset(self.data_dir)
-        if not self.test_dir == None:
-            self.test_dataset = Test_Dataset(self.test_dir)
-        else:
-            self.test_dataset = None
-        super().__init__(self.dataset,self.test_dataset, batch_size, shuffle, num_workers)
+class train_original_3DRecGAN(BaseDataLoader):
+    def __init__(self, data_dir, batch_size, shuffle=True, num_workers=1, training=True):
+        self.dataset = Train_Dataset(data_dir)
+        super().__init__(self.dataset, batch_size, shuffle, num_workers)
+        
+class test_original_3DRecGAN(BaseDataLoader):
+    def __init__(self, data_dir, batch_size, shuffle=True, num_workers=1, training=True):
+        self.dataset = Test_Dataset(data_dir)
+        super().__init__(self.dataset, batch_size, shuffle, num_workers)
 
 
 class Train_Dataset(torch.utils.data.Dataset):

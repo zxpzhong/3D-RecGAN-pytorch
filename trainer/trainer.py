@@ -9,14 +9,14 @@ class Trainer(BaseTrainer):
     Trainer class
     """
     def __init__(self, model, criterion, metric_ftns, optimizer, config, data_loader,
-                 valid_data_loader=None,veri_mode = False, lr_scheduler=None, len_epoch=None):
+                 valid_data_loader=None, lr_scheduler=None, len_epoch=None):
         super().__init__(model, criterion, metric_ftns, optimizer, config)
-        self.veri_mode = veri_mode
         self.config = config
         self.data_loader = data_loader
         if len_epoch is None:
             # epoch-based training
-            self.len_epoch = len(self.data_loader.loader_)
+            self.len_epoch = len(self.data_loader.dataset)
+            # self.len_epoch = len(self.data_loader.loader_)
         else:
             # iteration-based training
             self.data_loader = inf_loop(data_loader)
@@ -32,8 +32,8 @@ class Trainer(BaseTrainer):
         # self.AE_loss = F.cross_entropy
         
         # optimizer
-        self.Generator_opt = torch.optim.Adam(self.model.unet, lr = 0.01, momentum=0.9)
-        self.Discriminator_opt = torch.optim.Adam(self.model.discriminator, lr = 0.01, momentum=0.9)
+        self.Generator_opt = torch.optim.Adam(self.model.unet.parameters(), lr = 0.01)
+        self.Discriminator_opt = torch.optim.Adam(self.model.discriminator.parameters(), lr = 0.01)
         
     def _train_epoch(self, epoch):
         """
