@@ -150,7 +150,7 @@ def pad_to_shape(this, shp):
 
 
 class UNet3D(nn.Module):
-    def __init__(self, in_channels, out_channels, conv_depths=(64, 128, 256, 512)):
+    def __init__(self, in_channels, out_channels, conv_depths=(8, 16, 32, 64)):
         assert len(conv_depths) > 2, 'conv_depths must have at least 3 members'
 
         super(UNet3D, self).__init__()

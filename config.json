@@ -9,7 +9,7 @@
         "type": "train_original_3DRecGAN",
         "args":{
             "data_dir": "/home/data/3d/3D-RecGAN_Data/",
-            "batch_size": 8,
+            "batch_size": 12,
             "shuffle": true,
             "num_workers": 2
         }

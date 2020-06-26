@@ -45,41 +45,44 @@ class Trainer(BaseTrainer):
         """
         self.model.train()
         self.train_metrics.reset()
-        real_labels = torch.ones(self.data_loader.batch_size).to(self.device)
-        fake_labels = torch.zeros(self.data_loader.batch_size).to(self.device)
         for batch_idx, (X, Y) in enumerate(tqdm(self.data_loader)):
             X, Y = X.to(self.device).float(), Y.to(self.device).float()
+            
+            real_labels = torch.ones(X.shape[0]).to(self.device)
+            fake_labels = torch.zeros(X.shape[0]).to(self.device)
+            
             self.optimizer.zero_grad()
             self.Generator_opt.zero_grad()
             self.Discriminator_opt.zero_grad()
             
             # train D
-            Y_fake,dis_fake = self.model(X)
-            dis_real = self.model.module.discriminator(Y)
-            d_real_loss = F.binary_cross_entropy(dis_real, real_labels)
-            d_fake_loss = F.binary_cross_entropy(dis_fake, fake_labels)
-            loss_D = d_real_loss + d_fake_loss
-            loss_D.backward()
-            self.Discriminator_opt.step()
+            # Y_fake,dis_fake = self.model(X)
+            # dis_real = self.model.module.discriminator(Y)
+            # d_real_loss = F.binary_cross_entropy(dis_real, real_labels)
+            # d_fake_loss = F.binary_cross_entropy(dis_fake, fake_labels)
+            # loss_D = d_real_loss + d_fake_loss
+            # loss_D.backward()
+            # self.Discriminator_opt.step()
             
             # train AE(G)
             Y_fake,dis_fake = self.model(X)
-            g_loss = F.binary_cross_entropy(dis_fake,real_labels)
-            ae_loss = torch.mean(torch.abs(Y_fake-Y))
+            # g_loss = F.binary_cross_entropy(dis_fake,real_labels)
+            # ae_loss = torch.mean(torch.abs(Y_fake-Y))
+            ae_loss = F.mse_loss(Y_fake,Y)
             # discriminator score
-            loss_G = ae_loss+g_loss
+            loss_G = ae_loss
             loss_G.backward()
             self.Generator_opt.step()
             
             if batch_idx % self.log_step == 0:
                 self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
                 self.train_metrics.update('loss_G', loss_G.item())
-                self.train_metrics.update('loss_D', loss_D.item())
-                self.logger.debug('Train Epoch: {} {} loss_G: {:.6f} loss_D: {:.6f}'.format(
+                # self.train_metrics.update('loss_D', loss_D.item())
+                self.logger.debug('Train Epoch: {} {} loss_G: {:.6f} loss_D: '.format(
                     epoch,
                     self._progress(batch_idx),
-                    loss_G.item(),
-                    loss_D.item()
+                    loss_G.item()
+                    # loss_D.item()
                     ))
                 # self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
             if batch_idx == self.len_epoch:
