@@ -8,7 +8,7 @@ class BaseTrainer:
     """
     Base class for all trainers
     """
-    def __init__(self, model, criterion, metric_ftns, optimizer, config):
+    def __init__(self, model, criterion, metric_ftns, optimizer_G,optimizer_D, config):
         self.config = config
         self.logger = config.get_logger('trainer', config['trainer']['verbosity'])
         # setup GPU device if available, move model into configured device
@@ -19,7 +19,8 @@ class BaseTrainer:
 
         self.criterion = criterion
         self.metric_ftns = metric_ftns
-        self.optimizer = optimizer
+        self.optimizer_G = optimizer_G
+        self.optimizer_D = optimizer_D
 
         cfg_trainer = config['trainer']
         self.epochs = cfg_trainer['epochs']
@@ -141,7 +142,8 @@ class BaseTrainer:
             'arch': arch,
             'epoch': epoch,
             'state_dict': self.model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
+            'optimizer_G': self.optimizer_G.state_dict(),
+            'optimizer_D': self.optimizer_D.state_dict(),
             'monitor_best': self.mnt_best,
             'config': self.config
         }
@@ -177,6 +179,7 @@ class BaseTrainer:
             self.logger.warning("Warning: Optimizer type given in config file is different from that of checkpoint. "
                                 "Optimizer parameters not being resumed.")
         else:
-            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            self.optimizer_G.load_state_dict(checkpoint['optimizer_G'])
+            self.optimizer_D.load_state_dict(checkpoint['optimizer_D'])
 
         self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))

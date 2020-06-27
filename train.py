@@ -34,15 +34,19 @@ def main(config):
 
     # build optimizer, learning rate scheduler. delete every lines containing lr_scheduler for disabling scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
+    
+    Generator_opt = config.init_obj('optimizer', torch.optim, model.unet.parameters())
+    Discriminator_opt = config.init_obj('optimizer', torch.optim, model.discriminator.parameters())
+        
 
-    lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
+    lr_scheduler_G = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, Generator_opt)
+    lr_scheduler_D = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, Discriminator_opt)
 
-    trainer = Trainer(model, criterion, metrics, optimizer,
+    trainer = Trainer(model, criterion, metrics, Generator_opt,Discriminator_opt,
                       config=config,
                       data_loader=data_loader,
                       valid_data_loader=valid_data_loader,
-                      lr_scheduler=lr_scheduler)
+                      lr_scheduler_G=lr_scheduler_G,lr_scheduler_D=lr_scheduler_D)
     trainer.train()
 
 

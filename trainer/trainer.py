@@ -11,9 +11,9 @@ class Trainer(BaseTrainer):
     """
     Trainer class
     """
-    def __init__(self, model, criterion, metric_ftns, optimizer, config, data_loader,
-                 valid_data_loader=None, lr_scheduler=None, len_epoch=None):
-        super().__init__(model, criterion, metric_ftns, optimizer, config)
+    def __init__(self, model, criterion, metric_ftns, optimizer_G,optimizer_D, config, data_loader,
+                 valid_data_loader=None, lr_scheduler_G=None,lr_scheduler_D=None, len_epoch=None):
+        super().__init__(model, criterion, metric_ftns, optimizer_G,optimizer_D, config)
         self.config = config
         self.data_loader = data_loader
         if len_epoch is None:
@@ -25,7 +25,8 @@ class Trainer(BaseTrainer):
             self.data_loader = inf_loop(data_loader)
             self.len_epoch = len_epoch
         self.valid_data_loader = valid_data_loader
-        self.lr_scheduler = lr_scheduler
+        self.lr_scheduler_G = lr_scheduler_G
+        self.lr_scheduler_D = lr_scheduler_D
         self.log_step = int(np.sqrt(data_loader.batch_size))
 
         self.train_metrics = MetricTracker('loss_G','loss_D', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
@@ -35,8 +36,8 @@ class Trainer(BaseTrainer):
         # self.AE_loss = F.cross_entropy
         
         # optimizer
-        self.Generator_opt = torch.optim.Adam(self.model.module.unet.parameters(), lr = 0.01)
-        self.Discriminator_opt = torch.optim.Adam(self.model.module.discriminator.parameters(), lr = 0.01)
+        self.Generator_opt = optimizer_G
+        self.Discriminator_opt = optimizer_D
         
     def _train_epoch(self, epoch):
         """
@@ -53,9 +54,8 @@ class Trainer(BaseTrainer):
             real_labels = torch.ones(X.shape[0]).to(self.device)
             fake_labels = torch.zeros(X.shape[0]).to(self.device)
             
-            self.optimizer.zero_grad()
-            self.Generator_opt.zero_grad()
-            self.Discriminator_opt.zero_grad()
+            self.optimizer_G.zero_grad()
+            self.optimizer_D.zero_grad()
             
             # train D
             # Y_fake,dis_fake = self.model(X)
@@ -101,8 +101,10 @@ class Trainer(BaseTrainer):
             val_log = self._valid_epoch(epoch)
             log.update(**{'val_'+k : v for k, v in val_log.items()})
 
-        if self.lr_scheduler is not None:
-            self.lr_scheduler.step()
+        if self.lr_scheduler_D is not None:
+            self.lr_scheduler_D.step()
+        if self.lr_scheduler_G is not None:
+            self.lr_scheduler_G.step()
         return log
 
     def _valid_epoch(self, epoch):
@@ -137,10 +139,14 @@ class Trainer(BaseTrainer):
             X_array = np.array(X_list).transpose([0,2,3,4,1])
             Y_array = np.array(Y_list).transpose([0,2,3,4,1])
             print('saving ply......')
-            for i in tqdm(range(Y_fake_array.shape[0])):
-                numpy_2_ply(Y_fake_array[i],os.path.join(self.config.save_dir,'Y_fake_epoch_{}_{}.ply'.format(epoch,i)),threshold=0.5)
-                numpy_2_ply(X_array[i],os.path.join(self.config.save_dir,'X_epoch_{}_{}.ply'.format(epoch,i)),threshold=0.5)
-                numpy_2_ply(Y_array[i],os.path.join(self.config.save_dir,'Y_epoch_{}_{}.ply'.format(epoch,i)),threshold=0.5)
+            np.save(os.path.join(self.config.save_dir,'Y_fake_epoch_{}.ply'.format(epoch)),Y_fake_array)
+            np.save(os.path.join(self.config.save_dir,'X_epoch_{}.ply'.format(epoch)),X_array)
+            np.save(os.path.join(self.config.save_dir,'Y_epoch_{}.ply'.format(epoch)),Y_array)
+            # for i in tqdm(range(Y_fake_array.shape[0])):
+                # numpy_2_ply(Y_fake_array[i],os.path.join(self.config.save_dir,'Y_fake_epoch_{}_{}.ply'.format(epoch,i)),threshold=0.5)
+                # numpy_2_ply(X_array[i],os.path.join(self.config.save_dir,'X_epoch_{}_{}.ply'.format(epoch,i)),threshold=0.5)
+                # numpy_2_ply(Y_array[i],os.path.join(self.config.save_dir,'Y_epoch_{}_{}.ply'.format(epoch,i)),threshold=0.5)
+                
             # log 
             
             # self.logger.debug("intra_cnt is : {} , inter_cnt is {} , intra_len is {} , inter_len is {}".format(intra_cnt_final,inter_cnt_final,intra_len_final,inter_len_final))
@@ -148,8 +154,8 @@ class Trainer(BaseTrainer):
             # self.valid_metrics.update('loss', eer)
             # self.writer.add_image('input', make_grid(data1.cpu(), nrow=8, normalize=True))
         # add histogram of model parameters to the tensorboard
-        for name, p in self.model.named_parameters():
-            self.writer.add_histogram(name, p, bins='auto')
+        # for name, p in self.model.named_parameters():
+        #     self.writer.add_histogram(name, p, bins='auto')
         return self.valid_metrics.result()
 
     def _progress(self, batch_idx):
