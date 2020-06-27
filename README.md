@@ -1,4 +1,4 @@
-# A unofficial pyotrch implement of 3D-RecGAN (ICCV Workshops 2017)
+# An unofficial pyotrch implement of 3D-RecGAN (ICCV Workshops 2017)
 
 # Requirements
 
