@@ -4,7 +4,6 @@ from torch.utils.data.dataloader import default_collate
 from torch.utils.data.sampler import SubsetRandomSampler
 import torch
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
 class DataPrefetcher():
     def __init__(self, loader,device):
         self.device = device
@@ -58,5 +57,4 @@ class BaseDataLoader(DataLoader):
             'collate_fn': collate_fn,
             'num_workers': self.num_workers
         }
-        # super().__init__(sampler=self.sampler, **self.init_kwargs)
-        return DataPrefetcher(DataLoader(**self.init_kwargs),device=torch.device('cuda'))
+        super().__init__(**self.init_kwargs)

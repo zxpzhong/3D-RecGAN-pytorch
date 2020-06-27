@@ -34,15 +34,19 @@ def main(config):
 
     # build optimizer, learning rate scheduler. delete every lines containing lr_scheduler for disabling scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
-    optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
+    
+    Generator_opt = config.init_obj('optimizer', torch.optim, model.unet.parameters())
+    Discriminator_opt = config.init_obj('optimizer', torch.optim, model.discriminator.parameters())
+        
 
-    lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
+    lr_scheduler_G = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, Generator_opt)
+    lr_scheduler_D = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, Discriminator_opt)
 
-    trainer = Trainer(model, criterion, metrics, optimizer,
+    trainer = Trainer(model, criterion, metrics, Generator_opt,Discriminator_opt,
                       config=config,
                       data_loader=data_loader,
                       valid_data_loader=valid_data_loader,
-                      lr_scheduler=lr_scheduler)
+                      lr_scheduler_G=lr_scheduler_G,lr_scheduler_D=lr_scheduler_D)
     trainer.train()
 
 
@@ -54,12 +58,18 @@ if __name__ == '__main__':
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
-
+    # args.add_argument('--local_rank', default=0, type=int,help='device')
+    
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')
     options = [
         CustomArgs(['--lr', '--learning_rate'], type=float, target='optimizer;args;lr'),
-        CustomArgs(['--bs', '--batch_size'], type=int, target='data_loader;args;batch_size')
+        CustomArgs(['--bs', '--batch_size'], type=int, target='data_loader;args;batch_size'),
+        
     ]
     config = ConfigParser.from_args(args, options)
+    # print(config.config.keys())
+    # print('###########')
+    # print(config.__dict__)
+    # exit()
     main(config)

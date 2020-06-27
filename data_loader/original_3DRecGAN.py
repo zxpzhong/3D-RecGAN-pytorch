@@ -85,7 +85,6 @@ class Data:
     def load_X_Y_files_paths(self,X_folder, Y_folder):
         X_data_files = [X_f for X_f in sorted(os.listdir(X_folder))]
         Y_data_files = [Y_f for Y_f in sorted(os.listdir(Y_folder))]
-
         return X_data_files, Y_data_files
 
     def voxel_grid_padding(self,a):
@@ -140,6 +139,7 @@ class Data:
 
         #Data.plotFromVoxels(voxel_grid)
         voxel_grid = self.voxel_grid_padding(voxel_grid)
+        voxel_grid = voxel_grid.transpose([3,0,1,2])
         return voxel_grid
 
     def load_X_Y_voxel_grids(self,X_data_files, Y_data_files):
@@ -166,6 +166,7 @@ class Data:
 class train_original_3DRecGAN(BaseDataLoader):
     def __init__(self, data_dir, batch_size, shuffle=True, num_workers=1, training=True):
         self.dataset = Train_Dataset(data_dir)
+        self.batch_size = batch_size
         super().__init__(self.dataset, batch_size, shuffle, num_workers)
         
 class test_original_3DRecGAN(BaseDataLoader):
@@ -187,6 +188,7 @@ class Train_Dataset(torch.utils.data.Dataset):
         # return training data
         X = self.data.load_single_voxel_grid(self.data.X_train_files[index])
         Y = self.data.load_single_voxel_grid(self.data.X_train_files[index])
+        
         return X,Y
 
 class Test_Dataset(torch.utils.data.Dataset):

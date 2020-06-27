@@ -1,3 +1,6 @@
 saved/
 __pycache__/
 .vscode/
+*.npy
+*.ply
+temp/

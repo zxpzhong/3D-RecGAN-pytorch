@@ -8,7 +8,7 @@ class BaseTrainer:
     """
     Base class for all trainers
     """
-    def __init__(self, model, criterion, metric_ftns, optimizer, config):
+    def __init__(self, model, criterion, metric_ftns, optimizer_G,optimizer_D, config):
         self.config = config
         self.logger = config.get_logger('trainer', config['trainer']['verbosity'])
         # setup GPU device if available, move model into configured device
@@ -19,7 +19,8 @@ class BaseTrainer:
 
         self.criterion = criterion
         self.metric_ftns = metric_ftns
-        self.optimizer = optimizer
+        self.optimizer_G = optimizer_G
+        self.optimizer_D = optimizer_D
 
         cfg_trainer = config['trainer']
         self.epochs = cfg_trainer['epochs']
@@ -96,8 +97,8 @@ class BaseTrainer:
                                      "Training stops.".format(self.early_stop))
                     break
 
-            if epoch % self.save_period == 0:
-                self._save_checkpoint(epoch, save_best=best)
+            # if epoch % self.save_period == 0:
+            #     self._save_checkpoint(epoch, save_best=best)
 
     def _prepare_device(self, n_gpu_use):
         n_gpu_use = n_gpu_use.split(',')
@@ -111,7 +112,10 @@ class BaseTrainer:
         if len(n_gpu_use) >0 :
             for gpu in n_gpu_use:
                 gpu_str+=gpu+','
+            print(gpu_str[:-1])
             os.environ["CUDA_VISIBLE_DEVICES"] = gpu_str[:-1]
+            # print("#########GPU : ",self.config.local_rank)
+            # torch.cuda.set_device(self.config.local_rank)
         n_gpu = torch.cuda.device_count()
         if len(n_gpu_use) > 0 and n_gpu == 0:
             self.logger.warning("Warning: There\'s no GPU available on this machine,"
@@ -138,7 +142,8 @@ class BaseTrainer:
             'arch': arch,
             'epoch': epoch,
             'state_dict': self.model.state_dict(),
-            'optimizer': self.optimizer.state_dict(),
+            'optimizer_G': self.optimizer_G.state_dict(),
+            'optimizer_D': self.optimizer_D.state_dict(),
             'monitor_best': self.mnt_best,
             'config': self.config
         }
@@ -149,27 +154,6 @@ class BaseTrainer:
             best_path = str(self.checkpoint_dir / 'model_best.pth')
             torch.save(state, best_path)
             self.logger.info("Saving current best: model_best.pth ...")
-        
-        # saved as onnx
-        self.model.eval()
-        x = torch.randn(1,*(3,224,224)).cuda()
-        # file name
-        export_onnx_file = str(self.checkpoint_dir / 'checkpoint-epoch{}.onnx'.format(epoch))
-        # self.model.set_swish(memory_efficient=False)
-        # 导出
-        torch.onnx.export(self.model,
-                            x,
-                            export_onnx_file,
-                            export_params=True,
-                            verbose=True,
-                            # opset_version=10,
-                            # do_constant_folding=True,	# 是否执行常量折叠优化
-                            input_names=["input"],		# 输入名
-                            output_names=["output"],	# 输出名
-                            # dynamic_axes={"input":{0:"batch_size"},		# 批处理变量
-                                            # "output":{0:"batch_size"}}
-                            )
-        # self.model.set_swish(memory_efficient=True)
         self.model.train()
 
     def _resume_checkpoint(self, resume_path):
@@ -195,6 +179,7 @@ class BaseTrainer:
             self.logger.warning("Warning: Optimizer type given in config file is different from that of checkpoint. "
                                 "Optimizer parameters not being resumed.")
         else:
-            self.optimizer.load_state_dict(checkpoint['optimizer'])
+            self.optimizer_G.load_state_dict(checkpoint['optimizer_G'])
+            self.optimizer_D.load_state_dict(checkpoint['optimizer_D'])
 
         self.logger.info("Checkpoint loaded. Resume training from epoch {}".format(self.start_epoch))
