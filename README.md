@@ -15,7 +15,7 @@ https://arxiv.org/abs/1708.07969
 
 ## Process
 
-<img src="https://feliximages.oss-cn-shenzhen.aliyuncs.com/2020-06-28-00-39-28-802.png" alt="3d_recgan_sample" style="zoom: 33%;" />
+<img src="3d_recgan_sample.png" alt="3d_recgan_sample" style="zoom: 33%;" />
 
 ## Data(Provided by author)
 
