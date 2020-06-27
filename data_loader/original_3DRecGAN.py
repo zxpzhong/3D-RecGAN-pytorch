@@ -187,7 +187,7 @@ class Train_Dataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         # return training data
         X = self.data.load_single_voxel_grid(self.data.X_train_files[index])
-        Y = self.data.load_single_voxel_grid(self.data.X_train_files[index])
+        Y = self.data.load_single_voxel_grid(self.data.Y_train_files[index])
         
         return X,Y
 

@@ -291,13 +291,13 @@ class RecGAN(nn.Module):
         super(RecGAN, self).__init__()
         # create AE (3D-Unet)
         # input 64*64*64*1 output 64*64*64*1
-        self.unet = UNet3D(1,1,final_sigmoid=True, f_maps=64, layer_order='gcr',num_groups=8, num_levels=5, is_segmentation=False, conv_padding=1)
+        self.unet = ResidualUNet3D(1,1,final_sigmoid=True, f_maps=64, layer_order='gcr',num_groups=8, num_levels=5, is_segmentation=False, conv_padding=1)
         # create discriminator (like the encoder)
         self.discriminator = Discriminator(1)
     def forward(self,X):
         Y_rec = self.unet(X)
         dis = self.discriminator(Y_rec)
-        return Y_rec,dis
+        return F.sigmoid(Y_rec),dis
     
 if __name__ == '__main__':
     input_data = torch.rand([1,1,64,64,64])

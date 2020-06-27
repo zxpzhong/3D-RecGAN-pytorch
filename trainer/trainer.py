@@ -7,6 +7,16 @@ from utils import inf_loop, MetricTracker,calc_eer
 from utils.numpy3D import numpy_2_ply
 import torch.nn.functional as F
 from tqdm import tqdm
+
+def cross_entropy(a, y):
+    # y [0,1]
+    # print(torch.log(a+1e-8))
+    # print(torch.log(1-a+1e-8))
+    # print(-y*torch.log(a+1e-8))
+    # print((1-y)*torch.log(1-a+1e-8))
+    # print(-y*torch.log(a+1e-8)-(1-y)*torch.log(1-a+1e-8))
+    return torch.sum(-y*torch.log(a+1e-8)-(1-y)*torch.log(1-a+1e-8))
+
 class Trainer(BaseTrainer):
     """
     Trainer class
@@ -68,17 +78,19 @@ class Trainer(BaseTrainer):
             
             # train AE(G)
             Y_fake,dis_fake = self.model(X)
-            # g_loss = F.binary_cross_entropy(dis_fake,real_labels)
+            # [bs, 262144]
+            ae_loss = cross_entropy(Y_fake.reshape(Y_fake.shape[0],-1),Y.reshape(Y.shape[0],-1))
+            # ae_loss = F.binary_cross_entropy(dis_fake.resize(dis_fake.shape[0],-1),real_labels.resize(dis_fake.shape[0],-1))
             # ae_loss = torch.mean(torch.abs(Y_fake-Y))
-            ae_loss = F.mse_loss(Y_fake,Y)
+            # ae_loss = F.mse_loss(Y_fake,Y)
             # discriminator score
             loss_G = ae_loss
             loss_G.backward()
             self.Generator_opt.step()
             
             if batch_idx % self.log_step == 0:
-                self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
-                self.train_metrics.update('loss_G', loss_G.item())
+                # self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
+                # self.train_metrics.update('loss_G', loss_G.item())
                 # self.train_metrics.update('loss_D', loss_D.item())
                 self.logger.debug('Train Epoch: {} {} loss_G: {:.6f} loss_D: '.format(
                     epoch,
