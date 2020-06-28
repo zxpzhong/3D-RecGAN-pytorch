@@ -6,6 +6,7 @@ import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from utils.metric import IOU_metric,cross_entropy
+import torch.nn.functional as F
 
 def main(config):
     logger = config.get_logger('test')
@@ -25,8 +26,7 @@ def main(config):
     logger.info('Loading checkpoint: {} ...'.format(config.resume))
     checkpoint = torch.load(config.resume)
     state_dict = checkpoint['state_dict']
-    if config['n_gpu'] > 1:
-        model = torch.nn.DataParallel(model)
+    model = torch.nn.DataParallel(model)
     model.load_state_dict(state_dict)
 
     # prepare model for testing
@@ -40,8 +40,8 @@ def main(config):
     
     with torch.no_grad():
         for i, (X, Y) in enumerate(tqdm(data_loader)):
-            X, Y = X.to(device), Y.to(device)
-            Y_fake = model.module.unet(X)
+            X, Y = X.to(device).float(), Y.to(device).float()
+            Y_fake = F.sigmoid(model.module.unet(X))
             #
             # save sample images, or do something with output here
             #

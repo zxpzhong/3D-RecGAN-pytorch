@@ -74,7 +74,6 @@ class Trainer(BaseTrainer):
             Y_fake,dis_fake = self.model(X)
             # [bs, 262144]
             # ae_loss = cross_entropy(Y_fake.reshape(Y_fake.shape[0],-1),Y.reshape(Y.shape[0],-1))
-            # ae_loss = F.binary_cross_entropy(dis_fake.resize(dis_fake.shape[0],-1),real_labels.resize(dis_fake.shape[0],-1))
             ae_loss = torch.mean(torch.abs(Y_fake-Y))
             # ae_loss = F.mse_loss(Y_fake,Y)
             # discriminator score
@@ -132,7 +131,7 @@ class Trainer(BaseTrainer):
             count = 0
             for batch_idx, (X,Y) in enumerate(tqdm(self.valid_data_loader)):
                 X,Y = X.to(self.device).float(),Y.to(self.device).float()
-                Y_fake = self.model.module.unet(X)
+                Y_fake = F.sigmoid(self.model.module.unet(X))
                 if batch_idx < length:
                     for i in range(Y_fake.shape[0]):
                         Y_fake_list.append(Y_fake[i].cpu().numpy())
