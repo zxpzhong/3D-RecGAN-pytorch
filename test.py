@@ -10,7 +10,8 @@ import torch.nn.functional as F
 
 def main(config):
     logger = config.get_logger('test')
-
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"] = config['n_gpu']
     # setup data_loader instances
     data_loader = getattr(module_data, config['test_data_loader']['type'])(
         config['test_data_loader']['args']['data_dir'],

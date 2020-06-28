@@ -52,7 +52,7 @@ https://pan.baidu.com/s/165IXaA_JISCwGzTUCiuPig 提取码: gbp2
 | :---------------: | :---: | :---: | :----: | :------: | :---: | :----: |
 | trained/tested on | chair | stool | toilet | 3D-RecAE | stool | toilet |
 | 3D-RecAE(CE loss) | 0.5931|   *   |   *    | 0.0547   |   *   |   *    |
-| 3D-RecAE(L1 loss) |      *|   *   |   *    |      *   |   *   |   *    |
+| 3D-RecAE(L1 loss) | 0.5171|   *   |   *    | 0.4769   |   *   |   *    |
 |     3D-RecGAN     |   *   |   *   |   *    |    *     |   *   |   *    |
 
 ## 5. Todo
