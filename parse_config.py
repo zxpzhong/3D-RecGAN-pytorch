@@ -28,6 +28,23 @@ class ConfigParser:
         exper_name = self.config['name']
         if run_id is None: # use timestamp as default run-id
             run_id = datetime.now().strftime(r'%m%d_%H%M%S')
+        else:
+            run_id = datetime.now().strftime(r'%m%d_%H%M%S')+'_'+run_id
+        
+        # ZIP code [ default choice ]
+        from utils.ZIPCODE import ZIPCODE
+        import time
+        import os
+        target_path = './saved/code/'
+        if not os.path.isdir(target_path):
+            os.mkdir(target_path)
+        target_name = run_id+'.zip'
+        source_path = './'
+        except_dir = ['saved','__pycache__','.ipynb_checkpoints','.vscode']
+        except_file = ['pth','npy']
+        ZIPCODE(target_path,target_name,source_path,except_dir,except_file)
+
+
         self._save_dir = save_dir / 'models' / exper_name / run_id
         self._log_dir = save_dir / 'log' / exper_name / run_id
 
@@ -57,6 +74,7 @@ class ConfigParser:
         if not isinstance(args, tuple):
             args = args.parse_args()
 
+        # log name
         if args.device is not None:
             os.environ["CUDA_VISIBLE_DEVICES"] = args.device
         if args.resume is not None:
@@ -75,7 +93,7 @@ class ConfigParser:
 
         # parse custom cli options into dictionary
         modification = {opt.target : getattr(args, _get_opt_name(opt.flags)) for opt in options}
-        return cls(config, resume, modification)
+        return cls(config, resume, modification,args.log)
 
     def init_obj(self, name, module, *args, **kwargs):
         """

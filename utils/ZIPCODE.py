@@ -19,6 +19,12 @@ def get_zip_file(input_path, result,except_dir_inner = [],except_file_inner = []
             if not file in except_dir_inner:
                 get_zip_file(input_path + '/' + file, result)
         elif not file in except_file_inner:
+            # 后缀
+            try:
+                if file.split('.')[-1] in except_file_inner:
+                    continue
+            except:
+                pass
             result.append(input_path + '/' + file)
 
 

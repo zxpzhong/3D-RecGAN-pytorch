@@ -26,7 +26,6 @@ def main(config):
     
     # build model architecture, then print to console
     model = config.init_obj('arch', module_arch)
-    logger.info(model)
 
     # get function handles of loss and metrics
     criterion = getattr(module_loss, config['loss'])
@@ -58,6 +57,8 @@ if __name__ == '__main__':
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
+    args.add_argument('-l', '--log', default='None', type=str,
+                    help='log name')
     # args.add_argument('--local_rank', default=0, type=int,help='device')
     
     # custom cli options to modify configuration from default values given in json file.
