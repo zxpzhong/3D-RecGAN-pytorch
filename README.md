@@ -6,14 +6,14 @@ Bo Yang, Hongkai Wen, Sen Wang, Ronald Clark, Andrew Markham, Niki Trigoni. In I
 
 https://arxiv.org/abs/1708.07969
 
-## Requirements
+## 1. Requirements
 
 - Python \>= 3.5 (3.6 recommended)
 - Training : [pytorch](https://github.com/pytorch/pytorch)>=1.0
 - torchvision>=0.4.0
 - tqdm
 
-## Process
+## 2. Process
 
 <img src="3d_recgan_sample.png" alt="3d_recgan_sample" style="zoom: 33%;" />
 
@@ -25,38 +25,44 @@ Data are also available at Baidu Pan:
 
 https://pan.baidu.com/s/165IXaA_JISCwGzTUCiuPig 提取码: gbp2
 
-## Run
+## 3. Run
+### 3.1 Train
 
 `python train.py -c config.json`
 
-## Experiments
+### 3.2 Test
 
-### Per-category IoU and CE Loss
+`python test.py -c config.json`
 
-Results in paper:
+## 4. Experiments
+
+### 4.1 Per-category IoU and CE Loss
+
+#### 4.1.1 Results in paper :
 
 |                   |  IOU  |       |        | CE Loss  |       |        |
 | :---------------: | :---: | :---: | :----: | :------: | :---: | :----: |
 | trained/tested on | chair | stool | toilet | 3D-RecAE | stool | toilet |
-|     3D-RecAE      | 0.633 | 0.488 | 0.520  |  0.069   | 0.085 | 0.166  |
+| 3D-RecAE(CE loss) | 0.633 | 0.488 | 0.520  |  0.069   | 0.085 | 0.166  |
 |     3D-RecGAN     | 0.661 | 0.501 | 0.569  |  0.074   | 0.083 | 0.157  |
 
-Re-implement:
+#### 4.1.2 Re-implement:
 
 |                   |  IOU  |       |        | CE Loss  |       |        |
 | :---------------: | :---: | :---: | :----: | :------: | :---: | :----: |
 | trained/tested on | chair | stool | toilet | 3D-RecAE | stool | toilet |
-|     3D-RecAE      |   *   |   *   |   *    |    *     |   *   |   *    |
+| 3D-RecAE(CE loss) | 0.5931|   *   |   *    | 0.0547   |   *   |   *    |
+| 3D-RecAE(L1 loss) |      *|   *   |   *    |      *   |   *   |   *    |
 |     3D-RecGAN     |   *   |   *   |   *    |    *     |   *   |   *    |
 
-## Todo
+## 5. Todo
 
-- [ ] RecGAN : Per-category IoU and CE Loss
+- [x] RecGAN : Per-category IoU and CE Loss
 - [ ] RecAE : Per-category IoU and CE Loss
 - [ ] Multi-category IoU and CE Loss
 - [ ] Cross-category IoU and CE Loss
 
-## Reference repo
+## 6. Reference repo
 
 - https://github.com/Yang7879/3D-RecGAN
 - https://github.com/wolny/pytorch-3dunet
