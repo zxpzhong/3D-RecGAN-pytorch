@@ -2,32 +2,25 @@ import argparse
 import torch
 from tqdm import tqdm
 import data_loader.data_loaders as module_data
-import model.loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
-
+from utils.metric import IOU_metric,cross_entropy
 
 def main(config):
     logger = config.get_logger('test')
 
     # setup data_loader instances
-    data_loader = getattr(module_data, config['data_loader']['type'])(
-        config['data_loader']['args']['data_dir'],
-        batch_size=512,
+    data_loader = getattr(module_data, config['test_data_loader']['type'])(
+        config['test_data_loader']['args']['data_dir'],
+        batch_size=2,
         shuffle=False,
-        validation_split=0.0,
         training=False,
         num_workers=2
     )
 
     # build model architecture
     model = config.init_obj('arch', module_arch)
-    logger.info(model)
-
-    # get function handles of loss and metrics
-    loss_fn = getattr(module_loss, config['loss'])
-    metric_fns = [getattr(module_metric, met) for met in config['metrics']]
 
     logger.info('Loading checkpoint: {} ...'.format(config.resume))
     checkpoint = torch.load(config.resume)
@@ -41,30 +34,24 @@ def main(config):
     model = model.to(device)
     model.eval()
 
-    total_loss = 0.0
-    total_metrics = torch.zeros(len(metric_fns))
-
+    IOU = 0
+    CE = 0
+    count = 0
+    
     with torch.no_grad():
-        for i, (data, target) in enumerate(tqdm(data_loader)):
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-
+        for i, (X, Y) in enumerate(tqdm(data_loader)):
+            X, Y = X.to(device), Y.to(device)
+            Y_fake = model.module.unet(X)
             #
             # save sample images, or do something with output here
             #
-
-            # computing loss, metrics on test set
-            loss = loss_fn(output, target)
-            batch_size = data.shape[0]
-            total_loss += loss.item() * batch_size
-            for i, metric in enumerate(metric_fns):
-                total_metrics[i] += metric(output, target) * batch_size
-
-    n_samples = len(data_loader.sampler)
-    log = {'loss': total_loss / n_samples}
-    log.update({
-        met.__name__: total_metrics[i].item() / n_samples for i, met in enumerate(metric_fns)
-    })
+            # cal test metric
+            for i in range(Y_fake.shape[0]):
+                IOU+=IOU_metric(Y_fake[i],Y[i])
+                count+=1
+            # output voxel dimension : 64
+            CE+=cross_entropy(Y_fake,Y)/(64*64*64)
+    log = {'IOU': IOU / count,'CE': CE / count}
     logger.info(log)
 
 
@@ -76,6 +63,7 @@ if __name__ == '__main__':
                       help='path to latest checkpoint (default: None)')
     args.add_argument('-d', '--device', default=None, type=str,
                       help='indices of GPUs to enable (default: all)')
-
+    args.add_argument('-l', '--log', default='None', type=str,
+                    help='log name')
     config = ConfigParser.from_args(args)
     main(config)
