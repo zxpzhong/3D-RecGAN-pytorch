@@ -30,10 +30,10 @@ class Trainer(BaseTrainer):
         self.valid_data_loader = valid_data_loader
         self.lr_scheduler_G = lr_scheduler_G
         self.lr_scheduler_D = lr_scheduler_D
-        self.log_step = int(data_loader.batch_size)
+        self.log_step = int(data_loader.batch_size)*10
 
         self.train_metrics = MetricTracker('loss_G','loss_D', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
-        self.valid_metrics = MetricTracker('loss', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
+        self.valid_metrics = MetricTracker('IOU','CE', *[m.__name__ for m in self.metric_ftns], writer=self.writer)
         
         # AE reconstruction loss
         # self.AE_loss = F.cross_entropy
@@ -52,32 +52,35 @@ class Trainer(BaseTrainer):
         self.model.train()
         self.train_metrics.reset()
         loss_D = torch.Tensor([0])
+        loss_G = torch.Tensor([0])
         for batch_idx, (X, Y) in enumerate(tqdm(self.data_loader)):
             X, Y = X.to(self.device).float(), Y.to(self.device).float()
             
             real_labels = torch.ones(X.shape[0]).to(self.device)
             fake_labels = torch.zeros(X.shape[0]).to(self.device)
             
-            self.optimizer_G.zero_grad()
             self.optimizer_D.zero_grad()
-            
             # train D
-            # Y_fake,dis_fake = self.model(X)
-            # dis_real = self.model.module.discriminator(Y)
-            # d_real_loss = F.binary_cross_entropy(dis_real, real_labels)
-            # d_fake_loss = F.binary_cross_entropy(dis_fake, fake_labels)
-            # loss_D = d_real_loss + d_fake_loss
-            # loss_D.backward()
-            # self.Discriminator_opt.step()
+            Y_fake,dis_fake,dis_real = self.model(X,Y,train_D=True)
+            # print('##########')
+            # print(dis_real.reshape(dis_real.shape[0],-1))
+            # print(dis_fake.reshape(dis_real.shape[0],-1))
+            d_real_loss = F.binary_cross_entropy(dis_real, real_labels)
+            d_fake_loss = F.binary_cross_entropy(dis_fake, fake_labels)
+            loss_D = d_real_loss + d_fake_loss
+            loss_D.backward()
+            self.Discriminator_opt.step()
             
+            self.optimizer_G.zero_grad()
             # train AE(G)
             Y_fake,dis_fake = self.model(X)
             # [bs, 262144]
-            # ae_loss = cross_entropy(Y_fake.reshape(Y_fake.shape[0],-1),Y.reshape(Y.shape[0],-1))
-            ae_loss = torch.mean(torch.abs(Y_fake-Y))
+            ae_loss = cross_entropy(Y_fake.reshape(Y_fake.shape[0],-1),Y.reshape(Y.shape[0],-1))
+            g_fake_loss = F.binary_cross_entropy(dis_fake, real_labels)
+            # ae_loss = torch.mean(torch.abs(Y_fake-Y))
             # ae_loss = F.mse_loss(Y_fake,Y)
             # discriminator score
-            loss_G = ae_loss
+            loss_G = ae_loss+g_fake_loss
             loss_G.backward()
             self.Generator_opt.step()
             
@@ -85,13 +88,12 @@ class Trainer(BaseTrainer):
                 self.writer.set_step((epoch - 1) * self.len_epoch + batch_idx)
                 self.train_metrics.update('loss_G', loss_G.item())
                 self.train_metrics.update('loss_D', loss_D.item())
-                self.logger.debug('Train Epoch: {} {} loss_G: {:.6f} loss_D: '.format(
+                self.logger.debug('Train Epoch: {} {} loss_G: {:.6f} loss_D: {:.6f}'.format(
                     epoch,
                     self._progress(batch_idx),
-                    loss_G.item()
-                    # loss_D.item()
+                    loss_G.item(),
+                    loss_D.item()
                     ))
-                # self.writer.add_image('input', make_grid(data.cpu(), nrow=8, normalize=True))
             if batch_idx == self.len_epoch:
                 break
             batch_idx+=1
@@ -131,7 +133,7 @@ class Trainer(BaseTrainer):
             count = 0
             for batch_idx, (X,Y) in enumerate(tqdm(self.valid_data_loader)):
                 X,Y = X.to(self.device).float(),Y.to(self.device).float()
-                Y_fake = F.sigmoid(self.model.module.unet(X))
+                Y_fake = self.model.module.unet(X)
                 if batch_idx < length:
                     for i in range(Y_fake.shape[0]):
                         Y_fake_list.append(Y_fake[i].cpu().numpy())
@@ -143,7 +145,7 @@ class Trainer(BaseTrainer):
                     IOU+=IOU_metric(Y_fake[i],Y[i])
                     count+=1
                 # output voxel dimension : 64
-                CE+=cross_entropy(Y_fake,Y)/(64*64*64)
+                CE+=cross_entropy(Y_fake,Y)
                     
             # save test set reconstruction 3D voxel
             Y_fake_array = np.array(Y_fake_list).transpose([0,2,3,4,1])

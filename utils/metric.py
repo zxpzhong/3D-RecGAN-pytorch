@@ -18,4 +18,4 @@ def cross_entropy(a, y):
     # print(-y*torch.log(a+1e-8))
     # print((1-y)*torch.log(1-a+1e-8))
     # print(-y*torch.log(a+1e-8)-(1-y)*torch.log(1-a+1e-8))
-    return -torch.sum(y*torch.log(a+1e-8)+(1-y)*torch.log(1-a+1e-8))
+    return (-torch.sum(y*torch.log(a+1e-8)+(1-y)*torch.log(1-a+1e-8)))/(64*64*64)

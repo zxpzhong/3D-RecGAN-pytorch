@@ -150,9 +150,8 @@ class Abstract3DUNet(nn.Module):
 
         # apply final_activation (i.e. Sigmoid or Softmax) only during prediction. During training the network outputs
         # logits and it's up to the user to normalize it before visualising with tensorboard or computing validation metric
-        if self.testing and self.final_activation is not None:
+        if self.final_activation is not None:
             x = self.final_activation(x)
-
         return x
 
 
@@ -265,25 +264,79 @@ class Encoder3D(nn.Module):
         return self.encoder(x)
     
 class Discriminator(nn.Module):
-    def __init__(self, in_channels,conv_depths=(4,8, 16, 32,64,128,1)):
-        assert len(conv_depths) > 2, 'conv_depths must have at least 3 members'
+    """
+    Base class for standard and residual UNet.
+    Args:
+        in_channels (int): number of input channels
+        out_channels (int): number of output segmentation masks;
+            Note that that the of out_channels might correspond to either
+            different semantic classes or to different binary segmentation mask.
+            It's up to the user of the class to interpret the out_channels and
+            use the proper loss criterion during training (i.e. CrossEntropyLoss (multi-class)
+            or BCEWithLogitsLoss (two-class) respectively)
+        f_maps (int, tuple): number of feature maps at each level of the encoder; if it's an integer the number
+            of feature maps is given by the geometric progression: f_maps ^ k, k=1,2,3,4
+        final_sigmoid (bool): if True apply element-wise nn.Sigmoid after the
+            final 1x1 convolution, otherwise apply nn.Softmax. MUST be True if nn.BCELoss (two-class) is used
+            to train the model. MUST be False if nn.CrossEntropyLoss (multi-class) is used to train the model.
+        basic_module: basic model for the encoder/decoder (DoubleConv, ExtResNetBlock, ....)
+        layer_order (string): determines the order of layers
+            in `SingleConv` module. e.g. 'crg' stands for Conv3d+ReLU+GroupNorm3d.
+            See `SingleConv` for more info
+        f_maps (int, tuple): if int: number of feature maps in the first conv layer of the encoder (default: 64);
+            if tuple: number of feature maps at each level
+        num_groups (int): number of groups for the GroupNorm
+        num_levels (int): number of levels in the encoder/decoder path (applied only if f_maps is an int)
+        is_segmentation (bool): if True (semantic segmentation problem) Sigmoid/Softmax normalization is applied
+            after the final convolution; if False (regression problem) the normalization layer is skipped at the end
+        testing (bool): if True (testing mode) the `final_activation` (if present, i.e. `is_segmentation=true`)
+            will be applied as the last operation during the forward pass; if False the model is in training mode
+            and the `final_activation` (even if present) won't be applied; default: False
+        conv_kernel_size (int or tuple): size of the convolving kernel in the basic_module
+        pool_kernel_size (int or tuple): the size of the window
+        conv_padding (int or tuple): add zero-padding added to all three sides of the input
+    """
 
+    def __init__(self, in_channels, out_channels, final_sigmoid, basic_module, f_maps=64, layer_order='gcr',
+                 num_groups=8, num_levels=4, is_segmentation=True, testing=False,
+                 conv_kernel_size=3, pool_kernel_size=2, conv_padding=1, **kwargs):
         super(Discriminator, self).__init__()
 
-        # defining encoder layers
-        encoder_layers = []
-        encoder_layers.append(First3D(in_channels, conv_depths[0], conv_depths[0]))
-        encoder_layers.extend([Encoder3D(conv_depths[i], conv_depths[i + 1], conv_depths[i + 1])
-                               for i in range(len(conv_depths)-1)])
+        self.testing = testing
 
-        # encoder, center and decoder layers
-        self.encoder_layers = nn.Sequential(*encoder_layers)
+        if isinstance(f_maps, int):
+            f_maps = number_of_features_per_level(f_maps, num_levels=num_levels)
 
-    def forward(self, x, return_all=False):
-        x_enc = [x]
-        for enc_layer in self.encoder_layers:
-            x_enc.append(enc_layer(x_enc[-1]))
-        return F.sigmoid(x_enc[-1])
+        # create encoder path consisting of Encoder modules. Depth of the encoder is equal to `len(f_maps)`
+        encoders = []
+        for i, out_feature_num in enumerate(f_maps):
+            if i == 0:
+                encoder = Encoder(in_channels, out_feature_num,
+                                  apply_pooling=False,  # skip pooling in the firs encoder
+                                  basic_module=basic_module,
+                                  conv_layer_order=layer_order,
+                                  conv_kernel_size=conv_kernel_size,
+                                  num_groups=num_groups,
+                                  padding=conv_padding)
+            else:
+                # TODO: adapt for anisotropy in the data, i.e. use proper pooling kernel to make the data isotropic after 1-2 pooling operations
+                encoder = Encoder(f_maps[i - 1], out_feature_num,
+                                  basic_module=basic_module,
+                                  conv_layer_order=layer_order,
+                                  conv_kernel_size=conv_kernel_size,
+                                  num_groups=num_groups,
+                                  pool_kernel_size=pool_kernel_size,
+                                  padding=conv_padding)
+
+            encoders.append(encoder)
+        self.encoders = nn.ModuleList(encoders)
+        self.final_conv = nn.Conv3d(f_maps[-1], out_channels, 1)
+    def forward(self, x):
+        # encoder part
+        for encoder in self.encoders:
+            x = encoder(x)
+        x = self.final_conv(x)
+        return F.sigmoid(x)
 
 
 class RecGAN(nn.Module):
@@ -292,13 +345,19 @@ class RecGAN(nn.Module):
         super(RecGAN, self).__init__()
         # create AE (3D-Unet)
         # input 64*64*64*1 output 64*64*64*1
-        self.unet = ResidualUNet3D(1,1,final_sigmoid=True, f_maps=64, layer_order='gcr',num_groups=8, num_levels=5, is_segmentation=False, conv_padding=1)
+        self.unet = ResidualUNet3D(1,1,final_sigmoid=True, f_maps=64, layer_order='gcr',num_groups=8, num_levels=5, is_segmentation=True, conv_padding=1)
         # create discriminator (like the encoder)
-        self.discriminator = Discriminator(1)
-    def forward(self,X):
-        Y_rec = self.unet(X)
-        dis = self.discriminator(Y_rec)
-        return F.sigmoid(Y_rec),dis
+        self.discriminator = Discriminator(1,1,basic_module=ExtResNetBlock,final_sigmoid=True, f_maps=8, layer_order='gcr',num_groups=2, num_levels=7, is_segmentation=False, conv_padding=1)
+    
+    def forward(self,X,Y=None,train_D=False):
+        Y_fake = self.unet(X)
+        dis_fake = self.discriminator(Y_fake)
+        if train_D:
+            # cal dis of real Y
+            dis_real = self.discriminator(Y)
+            return Y_fake,dis_fake,dis_real
+        else:
+            return Y_fake,dis_fake
     
 if __name__ == '__main__':
     input_data = torch.rand([1,1,64,64,64])

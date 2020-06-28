@@ -12,4 +12,4 @@ from torch.nn import init
 DNN from external file
 '''
 from model.efficientnet import efficientnet
-from model.RecGAN_V3 import RecGAN
+from model.RecGAN_V4 import RecGAN
