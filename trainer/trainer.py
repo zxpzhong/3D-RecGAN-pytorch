@@ -75,7 +75,9 @@ class Trainer(BaseTrainer):
             # train AE(G)
             Y_fake,dis_fake = self.model(X)
             # [bs, 262144]
-            ae_loss = cross_entropy(Y_fake.reshape(Y_fake.shape[0],-1),Y.reshape(Y.shape[0],-1))
+            Y_fake_ = Y_fake.reshape(Y_fake.shape[0],-1)
+            Y_ = Y.reshape(Y.shape[0],-1)
+            ae_loss = cross_entropy(Y_fake_,Y_)/Y_fake_.shape[1]
             g_fake_loss = F.binary_cross_entropy(dis_fake, real_labels)
             # ae_loss = torch.mean(torch.abs(Y_fake-Y))
             # ae_loss = F.mse_loss(Y_fake,Y)
