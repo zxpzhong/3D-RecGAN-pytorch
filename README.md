@@ -15,20 +15,19 @@ https://arxiv.org/abs/1708.07969
 
 ## 2. Process
 
-<img src="images/3d_recgan_sample.png" alt="3d_recgan_sample" style="zoom: 33%;" />
+<img src="images/3d_recgan_sample.png" alt="3d_recgan_sample" style="zoom: 15%;" />
 
 ## 3. Re-implement visualization
 Input:
-<img src="images/input.gif" alt="input" style="zoom:50%;" />
+<img src="images/input.gif" alt="input" style="zoom:25%;" />
 Ground Truth:
-<img src="images/GT.gif" alt="GT" style="zoom:50%;" />
+<img src="images/GT.gif" alt="GT" style="zoom:25%;" />
 3D-RecAE(L1 loss):
-<img src="images/3D-RecAE(L1%20loss).gif" alt="3D-RecAE(L1 loss)" style="zoom:50%;" />
-
+<img src="images/3D-RecAE(L1%20loss).gif" alt="3D-RecAE(L1 loss)" style="zoom:25%;" />
 3D-RecAE(CE loss):
-<img src="images/3D-RecAE(CE%20loss).gif" alt="3D-RecAE(CE loss)" style="zoom:50%;" />
-
+<img src="images/3D-RecAE(CE%20loss).gif" alt="3D-RecAE(CE loss)" style="zoom:25%;" />
 3D-RecGAN:
+
 ## 4. Data(Provided by author)
 
 https://drive.google.com/open?id=1n4qQzSd_S6Isd6WjKD_sq6LKqn4tiQm9
