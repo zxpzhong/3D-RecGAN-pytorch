@@ -147,7 +147,7 @@ class Trainer(BaseTrainer):
                     IOU+=IOU_metric(Y_fake[i],Y[i])
                     count+=1
                 # output voxel dimension : 64
-                CE+=cross_entropy(Y_fake,Y)
+                CE+=cross_entropy(Y_fake,Y)/(64*64*64)
                     
             # save test set reconstruction 3D voxel
             Y_fake_array = np.array(Y_fake_list).transpose([0,2,3,4,1])
