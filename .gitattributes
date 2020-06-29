@@ -1,0 +1,2 @@
+*.cs linguist-language=python
+*.asset linguist-language=python
