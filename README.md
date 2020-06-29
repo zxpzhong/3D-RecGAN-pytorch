@@ -27,7 +27,7 @@ Ground Truth:
 3D-RecAE(CE loss):
 <img src="images/3D-RecAE(CE%20loss).gif" alt="3D-RecAE(CE loss)" style="zoom:25%;" />
 3D-RecGAN:
-
+<img src="images/recGAN.gif" alt="recGAN" style="zoom:25%;" />
 ## 4. Data(Provided by author)
 
 https://drive.google.com/open?id=1n4qQzSd_S6Isd6WjKD_sq6LKqn4tiQm9
@@ -72,7 +72,7 @@ https://pan.baidu.com/s/165IXaA_JISCwGzTUCiuPig 提取码: gbp2
 | trained/tested on | chair | stool | toilet | chair    | stool | toilet |
 | 3D-RecAE(CE loss) | 0.5931|   *   |   *    | 0.0547   |   *   |   *    |
 | 3D-RecAE(L1 loss) | 0.5171|   *   |   *    | 0.4769   |   *   |   *    |
-|     3D-RecGAN     |   *   |   *   |   *    |    *     |   *   |   *    |
+|     3D-RecGAN     | 0.4478|   *   |   *    | 0.0805   |   *   |   *    |
 
 
 ## 7. Todo
